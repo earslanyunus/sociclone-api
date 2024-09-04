@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import { pool } from "../../config/db";
 import bcrypt from 'bcrypt'
+import { sendOTPEmail } from "../../config/mail";
 
 const router = express.Router();
 
@@ -41,10 +42,11 @@ router.post(
         if (emailCheck.rows.length>0) {
             return res.status(400).json({message:'This email is already registered'})
         }
-
         const hashedPassword = await bcrypt.hash(password,12)
 
         await pool.query('INSERT INTO users (username, email, password,isverified) VALUES ($1, $2, $3,false)',[username,email,hashedPassword])
+        
+        await sendOTPEmail(email,'000000')
         res.status(201).json({message:'User successfully registered'})
         
     } catch (error) {
