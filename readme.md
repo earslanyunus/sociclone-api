@@ -11,7 +11,10 @@ Bu projeyle öğrenmek istediğim konular:
 	•	Auth sistemlerini detaylıca deneyimlemek
 	•	Backend güvenliği konularına temel düzeyde giriş yapmak
 
-About the Project
+
+
+
+# About the Project
 
 Sociclone is a project I’m working on to improve my backend development skills. As this is a learning experience, there may be errors or shortcomings in the backend. If you notice any issues, please feel free to share them with me.
 
