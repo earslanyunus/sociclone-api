@@ -1,8 +1,9 @@
 import express, { Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import { pool } from "../../config/db";
-import bcrypt from 'bcrypt'
+import argon2, { argon2id } from 'argon2';
 import { sendOTPEmail } from "../../config/mail";
+import dragonflyClient from "../../config/dragonfly";
 
 const router = express.Router();
 
@@ -26,35 +27,52 @@ router.post(
       .withMessage("Password must contain at least one special character"),
   ],
   async (req: Request, res: Response) => {
+    console.time("Total Request Time");
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const {email,username,password} = req.body
+    const { email, username, password } = req.body;
     try {
-        const usernameCheck = await pool.query('SELECT * FROM users WHERE username = $1',[username])
-        if (usernameCheck.rows.length>0) {
-            return res.status(400).json({message:'This username is already registered'})
-            
-        }
-        const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1',[email])
-        if (emailCheck.rows.length>0) {
-            return res.status(400).json({message:'This email is already registered'})
-        }
-        const hashedPassword = await bcrypt.hash(password,12)
+      const usernameCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+      if (usernameCheck.rows.length > 0) {
+        return res.status(400).json({ message: 'This username is already registered' });
+      }
 
-        await pool.query('INSERT INTO users (username, email, password,isverified) VALUES ($1, $2, $3,false)',[username,email,hashedPassword])
-        
-        await sendOTPEmail(email,'000000')
-        res.status(201).json({message:'User successfully registered'})
-        
+      const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      if (emailCheck.rows.length > 0) {
+        return res.status(400).json({ message: 'This email is already registered' });
+      }
+
+      const createdOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedOtp = await argon2.hash(createdOtp, {
+        type: argon2id,
+        memoryCost: 12288,
+        parallelism: 1,
+        timeCost: 3
+      });
+
+      const hashedPassword = await argon2.hash(password, {
+        type: argon2id,
+        memoryCost: 12288,
+        parallelism: 1,
+        timeCost: 3
+      });
+
+      await dragonflyClient.setEx(email, 180, hashedOtp);
+      await pool.query('INSERT INTO users (username, email, password, isverified) VALUES ($1, $2, $3, false)', [username, email, hashedPassword]);
+
+      sendOTPEmail(email, createdOtp).catch((error) => {
+        console.error("Failed to send OTP email:", error);
+      });
+
+      res.status(201).json({ message: 'User successfully registered' });
     } catch (error) {
-        console.error(error)
-        res.status(500).json({message:'Server error. Please try again later.'})
-        
+      res.status(500).json({ message: 'Server error. Please try again later.' });
+    } finally {
+      console.timeEnd("Total Request Time");
     }
-    
   }
 );
 
