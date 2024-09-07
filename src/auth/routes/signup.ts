@@ -13,6 +13,8 @@ router.post(
     body("username")
       .isLength({ min: 3 })
       .withMessage("Username must be at least 3 characters long"),
+    body("name").isLength({ min: 3 })
+      .withMessage("Name must be at least 3 characters long"),
     body("email").isEmail().withMessage("Please enter a valid email address"),
     body("password")
       .isLength({ min: 7 })
@@ -33,7 +35,7 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, username, password } = req.body;
+    const { email, username, password,name } = req.body;
     try {
       const usernameCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
       if (usernameCheck.rows.length > 0) {
@@ -61,7 +63,7 @@ router.post(
       });
 
       await dragonflyClient.setEx(email, 180, hashedOtp);
-      await pool.query('INSERT INTO users (username, email, password, isverified) VALUES ($1, $2, $3, false)', [username, email, hashedPassword]);
+      await pool.query('INSERT INTO users (username, email, password, isverified,name) VALUES ($1, $2, $3, false, $4)', [username, email, hashedPassword,name]);
 
       sendOTPEmail(email, createdOtp).catch((error) => {
         console.error("Failed to send OTP email:", error);
@@ -70,8 +72,6 @@ router.post(
       res.status(201).json({ message: 'User successfully registered' });
     } catch (error) {
       res.status(500).json({ message: 'Server error. Please try again later.' });
-    } finally {
-      console.timeEnd("Total Request Time");
     }
   }
 );
