@@ -4,6 +4,7 @@ import { body, validationResult } from "express-validator";
 import argon2, { argon2id } from 'argon2'
 import { sendOTPEmail } from "../../config/mail";
 import { pool } from "../../config/db";
+import { argon2Config } from "../../config/argon2_config";
 const router = Router()
 
 
@@ -31,12 +32,7 @@ router.post('/',[body('email').isEmail().withMessage('Invalid email')],async(req
         }
 
         const createdOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        const hashedOtp = await argon2.hash(createdOtp, {
-            type: argon2id,
-            memoryCost: 12288,
-            parallelism: 1,
-            timeCost: 3
-        });
+        const hashedOtp = await argon2.hash(createdOtp, argon2Config);
 
         await dragonflyClient.setEx(email, 180, hashedOtp);
         await sendOTPEmail(email, createdOtp);

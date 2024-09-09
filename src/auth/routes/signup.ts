@@ -4,7 +4,7 @@ import { pool } from "../../config/db";
 import argon2, { argon2id } from 'argon2';
 import { sendOTPEmail } from "../../config/mail";
 import dragonflyClient from "../../config/dragonfly";
-
+import { argon2Config } from "../../config/argon2_config";
 const router = express.Router();
 
 router.post(
@@ -29,13 +29,15 @@ router.post(
       .withMessage("Password must contain at least one special character"),
   ],
   async (req: Request, res: Response) => {
-    console.time("Total Request Time");
+    console.log("req.body", req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email, username, password,name } = req.body;
+  
+    
     try {
       const usernameCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
       if (usernameCheck.rows.length > 0) {
@@ -48,19 +50,9 @@ router.post(
       }
 
       const createdOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      const hashedOtp = await argon2.hash(createdOtp, {
-        type: argon2id,
-        memoryCost: 12288,
-        parallelism: 1,
-        timeCost: 3
-      });
+      const hashedOtp = await argon2.hash(createdOtp, argon2Config);
 
-      const hashedPassword = await argon2.hash(password, {
-        type: argon2id,
-        memoryCost: 12288,
-        parallelism: 1,
-        timeCost: 3
-      });
+      const hashedPassword = await argon2.hash(password, argon2Config);
 
       await dragonflyClient.setEx(email, 180, hashedOtp);
       await pool.query('INSERT INTO users (username, email, password, isverified,name) VALUES ($1, $2, $3, false, $4)', [username, email, hashedPassword,name]);

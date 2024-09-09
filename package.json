@@ -5,12 +5,16 @@
   "description": "sociclone-api",
   "main": "app.js",
   "scripts": {
-    "start": "ts-node-dev --respawn --transpile-only src/app.ts"
+    "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
+    "start": "node dist/app.js",
+    "build": "tsc"
+
   },
   "author": "earslanyunus",
   "license": "MIT",
   "dependencies": {
     "argon2": "^0.41.1",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-validator": "^7.2.0",
@@ -26,6 +30,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
     "@types/crypto-js": "^4.2.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.5.0",
