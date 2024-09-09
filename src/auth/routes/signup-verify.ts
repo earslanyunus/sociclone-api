@@ -20,10 +20,10 @@ router.post(
     }
     const {email, otp} = req.body;
     try {
-        const storedOTP = await dragonflyClient.get(email);
+        const storedOTP = await dragonflyClient.get(`signup_otp:${email}`);
 
         if (storedOTP && await argon2.verify(storedOTP, otp)) {
-            await dragonflyClient.del(email);
+            await dragonflyClient.del(`signup_otp:${email}`);
             await pool.query('UPDATE users SET isverified = TRUE WHERE email = $1', [email]);
             
             const userResult = await pool.query('SELECT id, username, email FROM users WHERE email = $1', [email]);

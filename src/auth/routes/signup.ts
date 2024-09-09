@@ -54,7 +54,7 @@ router.post(
 
       const hashedPassword = await argon2.hash(password, argon2Config);
 
-      await dragonflyClient.setEx(email, 180, hashedOtp);
+      await dragonflyClient.setEx(`signup_otp:${email}`, 180, hashedOtp);
       await pool.query('INSERT INTO users (username, email, password, isverified,name) VALUES ($1, $2, $3, false, $4)', [username, email, hashedPassword,name]);
 
       sendOTPEmail(email, createdOtp).catch((error) => {
