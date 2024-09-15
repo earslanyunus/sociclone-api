@@ -6,6 +6,7 @@ import argon2 from "argon2";
 import { pool } from "../../config/db";
 
 const router = express.Router();
+const isProduction = process.env.NODE_ENV === 'production';
 
 router.post("/", [
   body("email").isEmail().withMessage("Enter a valid email address"),
@@ -37,8 +38,8 @@ router.post("/", [
     const access_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "15m",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(),  });
     const refresh_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "7d",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(), });
 
-    res.cookie("access_token", access_token, { httpOnly: true, secure: true });
-    res.cookie("refresh_token", refresh_token, { httpOnly: true, secure: true });
+    res.cookie("access_token", access_token, { httpOnly: true, secure: isProduction, sameSite: isProduction ? "strict" : "lax" });
+    res.cookie("refresh_token", refresh_token, { httpOnly: true, secure: isProduction, sameSite: isProduction ? "strict" : "lax" });
 
     return res.status(200).json({ message: "Login successful", user:{username:user.username,email:user.email,name:user.name} });
   } catch (error) {

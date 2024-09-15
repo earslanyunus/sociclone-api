@@ -14,6 +14,5 @@ export const sendOTPEmail = async (to: string, otp: string) => {
         return console.error({ error });
       }
     
-      console.log({ data });
   };
 

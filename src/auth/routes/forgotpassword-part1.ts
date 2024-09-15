@@ -21,6 +21,9 @@ router.post('/',[body('email').isEmail().withMessage('Invalid email')],async(req
             return res.status(404).json({ message: 'User not found.' });
         }
         const user = userCheck.rows[0]
+        if(user.type!=='local'){
+            return res.status(400).json({message:'Please use the appropriate login method'})
+        }
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const hashedOtp = await argon2.hash(otp,argon2Config);

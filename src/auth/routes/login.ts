@@ -27,20 +27,39 @@ router.post(
         user: any,
         info: { message: string } | undefined
       ) => {
-        if (err || !user) {
+        if (err) {
+          console.error("Passport authentication error:", err);
+          return res.status(500).json({
+            message: "Server error. Please try again later.",
+          });
+        }
+        if (!user) {
           return res.status(400).json({
             message: info ? info.message : "Check your credentials",
           });
         }
+        console.log(user);
 
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const hashedOtp = await argon2.hash(otp,argon2Config);
+        if(user.type!=='local'){
+          return res.status(400).json({
+            message: "Please use the appropriate login method",
+          });
+        }
 
-        await dragonflyClient.setEx(`login_otp:${user.email}`, 300, hashedOtp); 
+        try {
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const hashedOtp = await argon2.hash(otp, argon2Config);
 
-        await sendOTPEmail(user.email, otp);
+          await dragonflyClient.setEx(`login_otp:${user.email}`, 300, hashedOtp);
+          await sendOTPEmail(user.email, otp);
 
-        res.json({ message: "OTP sent", email: user.email });
+          res.json({ message: "OTP sent", email: user.email });
+        } catch (error) {
+          console.error("Error in login process:", error);
+          res.status(500).json({
+            message: "Server error. Please try again later.",
+          });
+        }
       }
     )(req, res, next);
   }

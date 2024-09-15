@@ -29,12 +29,11 @@ router.post(
       .withMessage("Password must contain at least one special character"),
   ],
   async (req: Request, res: Response) => {
-    console.log("req.body", req.body);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
+    
     const { email, username, password,name } = req.body;
   
     
@@ -55,7 +54,7 @@ router.post(
       const hashedPassword = await argon2.hash(password, argon2Config);
 
       await dragonflyClient.setEx(`signup_otp:${email}`, 180, hashedOtp);
-      await pool.query('INSERT INTO users (username, email, password, isverified,name) VALUES ($1, $2, $3, false, $4)', [username, email, hashedPassword,name]);
+      await pool.query('INSERT INTO users (username, email, password, isverified,name,type) VALUES ($1, $2, $3, false, $4,$5)', [username, email, hashedPassword,name,'local']);
 
       sendOTPEmail(email, createdOtp).catch((error) => {
         console.error("Failed to send OTP email:", error);
@@ -63,6 +62,8 @@ router.post(
 
       res.status(201).json({ message: 'User successfully registered' });
     } catch (error) {
+      console.error(error);
+
       res.status(500).json({ message: 'Server error. Please try again later.' });
     }
   }
