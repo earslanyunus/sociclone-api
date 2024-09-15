@@ -189,7 +189,7 @@ describe('Login', () => {
     it('should send OTP for valid login credentials', async () => {
         (passport.authenticate as jest.Mock).mockImplementation((strategy, options, callback) => {
             return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-                callback(null, { id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User' }, null);
+                callback(null, { id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User', type: 'local' }, null);
             };
         });
 
@@ -339,6 +339,7 @@ describe('Login Verify', () => {
 describe('Resend OTP', () => {
     beforeEach(() => {
       jest.clearAllMocks();
+      jest.resetAllMocks();
     });
   
     it('should resend OTP for signup', async () => {
@@ -428,19 +429,18 @@ describe('Resend OTP', () => {
     beforeEach(() => {
       jest.clearAllMocks();
     });
-  
     it('should send OTP for valid email', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [{ email: 'test@test.com' }] });
-      (dragonflyClient.setEx as jest.Mock).mockResolvedValue('OK');
-      (sendOTPEmail as jest.Mock).mockResolvedValue(true);
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', password: 'hashedPassword', type: 'local' }] });
+      (dragonflyClient.setEx as jest.Mock).mockResolvedValueOnce('OK');
+      (sendOTPEmail as jest.Mock).mockResolvedValueOnce(true);
       (argon2.hash as jest.Mock).mockResolvedValue('hashedOtp');
       (jwt.sign as jest.Mock).mockReturnValue('part1Hash');
-  
-      const res = await request(app)
-        .post('/auth/forgotpassword-part1')
-        .send({ email: 'test@test.com' });
-  
-      expect(res.statusCode).toBe(200);
+
+      const res = await request(app).post('/auth/forgotpassword-part1').send({
+        email: 'test@test.com'
+      });
+
+      expect(res.statusCode).toEqual(200);
       expect(res.body).toEqual({ message: 'OTP sent', part1Hash: 'part1Hash' });
     });
   
@@ -454,11 +454,11 @@ describe('Resend OTP', () => {
     });
   
     it('should return 404 if user not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
-  
-      const res = await request(app)
-        .post('/auth/forgotpassword-part1')
-        .send({ email: 'nonexistent@test.com' });
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      const res = await request(app).post('/auth/forgotpassword-part1').send({
+        email: 'nonexistent@test.com'
+      });
   
       expect(res.statusCode).toBe(404);
       expect(res.body).toEqual({ message: 'User not found.' });
@@ -630,4 +630,19 @@ describe('Resend OTP', () => {
           expect(res.body).toEqual({ message: 'Server error. Please try again later.' });
         });
       });
+  });
+  describe('Signout', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      jest.resetAllMocks();
+    });
+  
+   
+  
+    it('should return 200 even if not logged in', async () => {
+      const res = await request(app).post('/auth/signout');
+  
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ message: 'Signout successful' });
+    });
   });

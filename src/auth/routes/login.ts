@@ -38,7 +38,7 @@ router.post(
             message: info ? info.message : "Check your credentials",
           });
         }
-        console.log(user);
+        
 
         if(user.type!=='local'){
           return res.status(400).json({
