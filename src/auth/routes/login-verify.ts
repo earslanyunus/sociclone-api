@@ -38,8 +38,8 @@ router.post("/", [
     const access_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "15m",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(),  });
     const refresh_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "7d",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(), });
 
-    res.cookie("access_token", access_token, { httpOnly: true, secure: isProduction, sameSite: isProduction ? "strict" : "lax" });
-    res.cookie("refresh_token", refresh_token, { httpOnly: true, secure: isProduction, sameSite: isProduction ? "strict" : "lax" });
+    res.cookie("access_token", access_token, { httpOnly: true, secure: process.env.NODE_ENV !== "development", sameSite: "strict", maxAge: 15 * 60 * 1000 });
+    res.cookie("refresh_token", refresh_token, { httpOnly: true, secure: process.env.NODE_ENV !== "development", sameSite: "strict", maxAge: 7 * 24 * 60 * 60 * 1000 });
 
     return res.status(200).json({ message: "Login successful", user:{username:user.username,email:user.email,name:user.name} });
   } catch (error) {

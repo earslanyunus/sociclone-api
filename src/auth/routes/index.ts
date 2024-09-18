@@ -9,6 +9,7 @@ import forgotpasswordPart2Route from './forgotpassword-part2';
 import forgotpasswordPart3Route from './forgotpassword-part3';
 import googleAuthRoute from './googleAuth';
 import signoutRoute from './signout';
+import refreshOtpRoute from './refreshOtp';
 const router = express.Router();
 
 router.use('/signup', signupRoute);
@@ -21,6 +22,7 @@ router.use('/forgotpassword-part2', forgotpasswordPart2Route);
 router.use('/forgotpassword-part3', forgotpasswordPart3Route);
 router.use('/google',googleAuthRoute)
 router.use('/signout',signoutRoute)
+router.use('/refresh-otp',refreshOtpRoute)
 
 
 
