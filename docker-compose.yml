@@ -1,13 +1,14 @@
-version: '3.8'
 
 services:
   postgres:
     image: postgres:latest
     container_name: sociclone-postgres
+    restart: always
+    shm_size: 128mb
     environment:
-      - POSTGRES_USER={DB_USER}
-      - POSTGRES_PASSWORD={DB_PASSWORD}
-      - POSTGRES_DB={DB_DATABASE}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
     volumes:
       - sociclone-postgres-data:/var/lib/postgresql/data
     ports:
@@ -20,7 +21,6 @@ services:
       memlock: -1
     ports:
       - "6379:6379"
-    network_mode: "host"
     volumes:
       - sociclone-dragonflydata:/data
 
