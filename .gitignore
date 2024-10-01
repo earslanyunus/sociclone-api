@@ -16,4 +16,3 @@ Thumbs.db
 /build
 /coverage
 *.log
-argon2_config.ts
