@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Bağımlılıkları yükle
-RUN npm ci --only=production
+RUN npm install
 
 # TypeScript'i global olarak yükle
 RUN npm install -g typescript
