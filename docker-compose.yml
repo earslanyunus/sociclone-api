@@ -1,5 +1,13 @@
 
 services:
+  api:
+    build: .
+    container_name: sociclone-api
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - .:/app
   postgres:
     image: postgres:latest
     container_name: sociclone-postgres
