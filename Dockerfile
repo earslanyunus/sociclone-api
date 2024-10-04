@@ -1,26 +1,13 @@
-# Node.js 20 Alpine sürümünü temel imaj olarak kullan
-FROM node:20-alpine
+FROM oven/bun:debian
 
-# Çalışma dizinini belirle
 WORKDIR /app
 
-# package.json ve package-lock.json dosyalarını kopyala
-COPY package*.json ./
+COPY package.json  ./
 
-# Bağımlılıkları yükle
 RUN npm install
 
-# TypeScript'i global olarak yükle
-RUN npm install -g typescript
-
-# Kaynak kodları kopyala
 COPY . .
 
-# TypeScript kodunu derle
-RUN npm run build
-
-# Uygulama için kullanılacak portu belirt
 EXPOSE 3000
 
-# Uygulamayı başlat
-CMD ["npm", "start"]
+CMD ["bun", "src/app.ts"]
