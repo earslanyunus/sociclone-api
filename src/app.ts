@@ -12,6 +12,9 @@ app.use(cors({
   origin: process.env.API_URL,
   credentials: true,
 }));  
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
 app.use(express.json());
 app.use(passport.initialize());
 
