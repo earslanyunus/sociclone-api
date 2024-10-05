@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   api:
@@ -5,36 +6,54 @@ services:
     container_name: sociclone-api
     restart: always
     ports:
-      - "80:80"
-    volumes:
-      - .:/app
+      - "80:3000"  
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_HOST=${DB_HOST}  
+      - DB_PORT=${DB_PORT}
+      - REDIS_URL=${REDIS_URL}  
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
+      - ARGON2_MEMORY_COST=${ARGON2_MEMORY_COST}
+      - ARGON2_TIME_COST=${ARGON2_TIME_COST}
+      - ARGON2_PARALLELISM=${ARGON2_PARALLELISM}
+      - ARGON2_HASH_LENGTH=${ARGON2_HASH_LENGTH}
+      - API_URL=${API_URL}
+    depends_on:
+      - postgres
+      - dragonfly
+
   postgres:
     image: postgres:latest
     container_name: sociclone-postgres
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_DATABASE}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE}
     volumes:
       - sociclone-postgres-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
-
   dragonfly:
     image: 'docker.dragonflydb.io/dragonflydb/dragonfly'
+    container_name: sociclone-dragonfly
     ulimits:
       memlock: -1
     ports:
       - "6379:6379"
     volumes:
       - sociclone-dragonflydata:/data
-
-
-
-
 
 volumes:
   sociclone-dragonflydata:
