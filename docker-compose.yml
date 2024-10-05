@@ -6,7 +6,7 @@ services:
     container_name: sociclone-api
     restart: always
     ports:
-      - "80:3000"  
+      - "3000:3000"  
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
