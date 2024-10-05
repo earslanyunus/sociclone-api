@@ -1,13 +1,16 @@
-FROM oven/bun:debian
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package.json  ./
+COPY package*.json ./
 
-RUN bun install
+RUN npm install
 
 COPY . .
 
-EXPOSE 80
+RUN npm run build
 
-CMD ["bun", "src/app.ts"]
+EXPOSE 3000
+
+CMD ["node", "dist/app.js"]
+
