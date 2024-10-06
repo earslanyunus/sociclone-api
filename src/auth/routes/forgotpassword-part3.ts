@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import argon2 from 'argon2'
 import { argon2Config } from "../../config/argon2_config";
-import { pool } from "../../config/db";
 import jwt from "jsonwebtoken";
+import prisma from "../../config/prisma";
 const router = Router()
 
 router.post('/',[body('part2Hash').isString().withMessage('Invalid part2Hash'),
@@ -34,14 +34,24 @@ router.post('/',[body('part2Hash').isString().withMessage('Invalid part2Hash'),
         }
 
         const {email} = decoded
-        const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userCheck.rows.length === 0) {
+        const userCheck = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        });
+        if (!userCheck) {
             return res.status(404).json({ message: 'User not found.' });
         }
         const hashedPassword = await argon2.hash(newPassword,argon2Config)
 
-        await pool.query('UPDATE users SET password = $1 WHERE email = $2', [hashedPassword, email]);
-
+        await prisma.user.update({
+            where: {
+                email: email
+            },
+            data: {
+                password: hashedPassword
+            }
+        });
 
         res.status(200).json({message: 'Password updated'});
         

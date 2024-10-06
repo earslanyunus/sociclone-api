@@ -2,10 +2,12 @@ import { Router, Request, Response } from "express";
 import { body, validationResult } from "express-validator";
 import argon2 from 'argon2'
 import { argon2Config } from "../../config/argon2_config";
-import { pool } from "../../config/db";
+import { PrismaClient } from "@prisma/client";
 import { sendOTPEmail } from "../../config/mail";
 import dragonflyClient from "../../config/dragonfly";
 import jwt from "jsonwebtoken";
+import prisma from "../../config/prisma";
+
 const router = Router()
 
 router.post('/',[body('email').isEmail().withMessage('Invalid email')],async(req:Request,res:Response)=>{
@@ -16,11 +18,14 @@ router.post('/',[body('email').isEmail().withMessage('Invalid email')],async(req
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (userCheck.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found.' });
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-        const user = userCheck.rows[0]
         if(user.type!=='local'){
             return res.status(400).json({message:'Please use the appropriate login method'})
         }

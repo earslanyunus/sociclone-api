@@ -3,7 +3,7 @@ import { body, validationResult } from "express-validator";
 import dragonflyClient from "../../config/dragonfly";
 import jwt from "jsonwebtoken";
 import argon2 from "argon2";
-import { pool } from "../../config/db";
+import prisma from "../../config/prisma";
 
 const router = express.Router();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -32,9 +32,14 @@ router.post("/", [
 
     await dragonflyClient.del(`login_otp:${email}`);
 
-    const userResult = await pool.query("SELECT id, username, email FROM users WHERE email = $1", [email]);
-    const user = userResult.rows[0];
-
+    const user = await prisma.user.findUnique({
+        where: {
+            email: email
+        }
+    });
+    if (!user) {
+        return res.status(400).json({ message: "User not found" });
+    }
     const access_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "15m",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(),  });
     const refresh_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "7d",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(), });
 

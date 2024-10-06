@@ -1,9 +1,9 @@
 import { Request, Response, Router } from "express";
 import { body, validationResult } from "express-validator";
 import dragonflyClient from "../../config/dragonfly";
-import { pool } from "../../config/db";
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
+import prisma from "../../config/prisma";
 
 const router = Router();
 
@@ -24,10 +24,20 @@ router.post(
 
         if (storedOTP && await argon2.verify(storedOTP, otp)) {
             await dragonflyClient.del(`signup_otp:${email}`);
-            await pool.query('UPDATE users SET isverified = TRUE WHERE email = $1', [email]);
+            await prisma.user.update({
+                where: { email: email },
+                data: { isVerified: true }
+            });
+          
             
-            const userResult = await pool.query('SELECT id, username, email FROM users WHERE email = $1', [email]);
-            const user = userResult.rows[0];
+            const user = await prisma.user.findUnique({
+                where: { email: email },
+                select: { id: true, username: true, email: true, name: true }
+            });
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
 
             const access_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "15m",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(),  });
             const refresh_token = jwt.sign({ id: user.id }, process.env.JWT_SECRET as string, { expiresIn: "7d",issuer:process.env.JWT_ISSUER,audience:process.env.JWT_AUDIENCE,subject:user.id.toString(), });

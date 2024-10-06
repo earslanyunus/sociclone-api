@@ -1,6 +1,5 @@
 import express from "express";
 import authRoutes from './auth/routes/index';
-import { pool } from "./config/db";
 import passport from './config/passport';
 import cors from "cors";
 import dotenv from 'dotenv';
@@ -27,9 +26,3 @@ app.listen(PORT, () => {
   console.log('Server is running ');
 });
 
-process.on('SIGINT', () => {
-  pool.end(() => {
-    console.log('Database connection closed');
-    process.exit(0);
-  });
-});

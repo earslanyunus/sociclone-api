@@ -3,7 +3,6 @@ import dragonflyClient from "../../config/dragonfly";
 import { body, validationResult } from "express-validator";
 import argon2, { argon2id } from 'argon2'
 import { sendOTPEmail } from "../../config/mail";
-import { pool } from "../../config/db";
 import { argon2Config } from "../../config/argon2_config";
 const router = Router()
 
