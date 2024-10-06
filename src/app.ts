@@ -3,9 +3,10 @@ import authRoutes from './auth/routes/index';
 import { pool } from "./config/db";
 import passport from './config/passport';
 import cors from "cors";
-
-
+import dotenv from 'dotenv';
+dotenv.config();
 const app = express();
+
 
 const PORT = process.env.PORT || 3000;
 app.use(cors({

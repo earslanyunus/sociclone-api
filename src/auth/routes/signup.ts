@@ -1,6 +1,5 @@
 import express, { Request, Response } from "express";
 import { body, validationResult } from "express-validator";
-import { pool } from "../../config/db";
 import argon2, { argon2id } from 'argon2';
 import { sendOTPEmail } from "../../config/mail";
 import dragonflyClient from "../../config/dragonfly";
@@ -35,17 +34,21 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
     
-    const { email, username, password,name } = req.body;
+    const { email, username, password, name } = req.body;
   
     
     try {
-      const usernameCheck = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-      if (usernameCheck.rows.length > 0) {
+      const usernameCheck = await prisma.user.findUnique({
+        where: { username: username }
+      });
+      if (usernameCheck) {
         return res.status(400).json({ message: 'This username is already registered' });
       }
 
-      const emailCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-      if (emailCheck.rows.length > 0) {
+      const emailCheck = await prisma.user.findUnique({
+        where: { email: email }
+      });
+      if (emailCheck) {
         return res.status(400).json({ message: 'This email is already registered' });
       }
 
@@ -56,18 +59,18 @@ router.post(
 
       await dragonflyClient.setEx(`signup_otp:${email}`, 180, hashedOtp);
       await prisma.user.create({
-        data:{
+        data: {
           username,
           email,
           name,
-          password:hashedPassword,
-          isVerified:false,
-          type:'local'
+          password: hashedPassword,
+          isVerified: false,
+          type: 'local'
         }
-      })
+      });
 
       sendOTPEmail(email, createdOtp).catch((error) => {
-        console.error("Failed to send OTP email:", error);
+        console.error("OTP email sending failed:", error);
       });
 
       res.status(201).json({ message: 'User successfully registered' });
