@@ -5,6 +5,7 @@ import argon2, { argon2id } from 'argon2';
 import { sendOTPEmail } from "../../config/mail";
 import dragonflyClient from "../../config/dragonfly";
 import { argon2Config } from "../../config/argon2_config";
+import prisma from "../../config/prisma";
 const router = express.Router();
 
 router.post(
@@ -54,7 +55,16 @@ router.post(
       const hashedPassword = await argon2.hash(password, argon2Config);
 
       await dragonflyClient.setEx(`signup_otp:${email}`, 180, hashedOtp);
-      await pool.query('INSERT INTO users (username, email, password, isverified,name,type) VALUES ($1, $2, $3, false, $4,$5)', [username, email, hashedPassword,name,'local']);
+      await prisma.user.create({
+        data:{
+          username,
+          email,
+          name,
+          password:hashedPassword,
+          isVerified:false,
+          type:'local'
+        }
+      })
 
       sendOTPEmail(email, createdOtp).catch((error) => {
         console.error("Failed to send OTP email:", error);
