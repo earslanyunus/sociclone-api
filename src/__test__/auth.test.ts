@@ -1,17 +1,20 @@
 import express from 'express';
 import authRoutes from '../auth/routes';
-import { pool } from '../config/db';
 import dragonflyClient from '../config/dragonfly';
 import { sendOTPEmail } from '../config/mail';
 import argon2 from 'argon2';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import passport from 'passport';
+import prisma from '../config/prisma';
 import { verify } from 'crypto';
 
-jest.mock('../config/db', () => ({
-  pool: {
-    query: jest.fn(),
+
+jest.mock('../config/prisma', () => ({
+  user: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
   },
 }));
 
@@ -50,10 +53,10 @@ app.use('/auth', authRoutes);
 describe('Signup', () => {
     it('should signup a new user', async () => {
         // Mock database responses
-        (pool.query as jest.Mock)
-            .mockResolvedValueOnce({ rows: [] }) // username check
-            .mockResolvedValueOnce({ rows: [] }) // email check
-            .mockResolvedValueOnce({ rows: [{ id: 1 }] }); // insert user
+        (prisma.user.findUnique as jest.Mock)
+            .mockResolvedValueOnce(null) // username check
+            .mockResolvedValueOnce(null) // email check
+        (prisma.user.create as jest.Mock).mockResolvedValueOnce({ id: 1 }); // insert user
 
         // Mock Redis setEx
         (dragonflyClient.setEx as jest.Mock).mockResolvedValue('OK');
@@ -72,7 +75,7 @@ describe('Signup', () => {
         expect(res.body).toEqual({ message: 'User successfully registered' });
     });
     it('should return 400 if username is already registered', async () => {
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1 }] }); // username check
+        (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 1 }); // username check
 
         const res = await request(app).post('/auth/signup').send({
             username: 'testuser',
@@ -85,8 +88,9 @@ describe('Signup', () => {
         expect(res.body).toEqual({ message: 'This username is already registered' });
     });
     it('should return 400 if email is already registered', async () => {
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // username check
-        (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1 }] }); // email check
+        (prisma.user.findUnique as jest.Mock)
+            .mockResolvedValueOnce(null) // username check
+            .mockResolvedValueOnce({ id: 1 }); // email check
 
         const res = await request(app).post('/auth/signup').send({
             username: 'testuser',
@@ -101,7 +105,7 @@ describe('Signup', () => {
     
       it('should return 500 status and error message on server error', async () => {
     // Sunucu hatasını simüle et (örneğin, veritabanı bağlantısını geçici olarak kes)
-    jest.spyOn(pool, 'query').mockRejectedValueOnce(new Error('Database connection error') as never);
+    jest.spyOn(prisma.user, 'findUnique').mockRejectedValueOnce(new Error('Database connection error'));
 
     const response = await request(app)
       .post('/auth/signup')
@@ -125,9 +129,9 @@ describe('Signup', () => {
 describe('Signup Verify',()=>{
     it('should verify user', async () => {
         // Mock database responses
-        (pool.query as jest.Mock)
-          .mockResolvedValueOnce({ rows: [] }) // İlk sorgu için boş sonuç
-          .mockResolvedValueOnce({ rows: [{ id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User' }] }); // Kullanıcı bilgileri sorgusu
+        (prisma.user.findUnique as jest.Mock)
+          .mockResolvedValueOnce({ id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User' })
+          .mockResolvedValueOnce({ id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User', emailVerified: true });
     
         // Mock Dragonfly responses
         (dragonflyClient.get as jest.Mock).mockResolvedValueOnce('hashed_otp');
@@ -263,7 +267,7 @@ describe('Login Verify', () => {
     (dragonflyClient.get as jest.Mock).mockResolvedValue('hashedOtp');
     (dragonflyClient.del as jest.Mock).mockResolvedValue('OK');
     (argon2.verify as jest.Mock).mockResolvedValue(true);
-    (pool.query as jest.Mock).mockResolvedValue({ rows: [{ id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User' }] });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 1, username: 'testuser', email: 'test@test.com', name: 'Test User' });
     (jwt.sign as jest.Mock).mockReturnValue('mockedToken');
   
     const res = await request(app)
@@ -430,7 +434,7 @@ describe('Resend OTP', () => {
       jest.clearAllMocks();
     });
     it('should send OTP for valid email', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ id: 1, email: 'test@test.com', password: 'hashedPassword', type: 'local' }] });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 1, email: 'test@test.com', password: 'hashedPassword', type: 'local' });
       (dragonflyClient.setEx as jest.Mock).mockResolvedValueOnce('OK');
       (sendOTPEmail as jest.Mock).mockResolvedValueOnce(true);
       (argon2.hash as jest.Mock).mockResolvedValue('hashedOtp');
@@ -454,7 +458,7 @@ describe('Resend OTP', () => {
     });
   
     it('should return 404 if user not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
 
       const res = await request(app).post('/auth/forgotpassword-part1').send({
         email: 'nonexistent@test.com'
@@ -465,7 +469,7 @@ describe('Resend OTP', () => {
     });
   
     it('should return 500 for server error', async () => {
-      (pool.query as jest.Mock).mockRejectedValue(new Error('Database error'));
+      (prisma.user.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'));
   
       const res = await request(app)
         .post('/auth/forgotpassword-part1')
@@ -561,8 +565,8 @@ describe('Resend OTP', () => {
         it('should update password successfully', async () => {
           const mockEmail = 'test@test.com';
           (jwt.verify as jest.Mock).mockReturnValue({ email: mockEmail, iss: 'test_issuer', aud: 'test_audience' });
-          (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [{ email: mockEmail }] });
-          (pool.query as jest.Mock).mockResolvedValueOnce({ rowCount: 1 });
+          (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ id: 1, email: mockEmail });
+          (prisma.user.update as jest.Mock).mockResolvedValueOnce({ id: 1, email: mockEmail });
           (argon2.hash as jest.Mock).mockResolvedValue('hashedPassword');
       
           const res = await request(app)
@@ -608,7 +612,7 @@ describe('Resend OTP', () => {
       
         it('should return 404 if user not found', async () => {
           (jwt.verify as jest.Mock).mockReturnValue({ email: 'test@test.com', iss: 'test_issuer', aud: 'test_audience' });
-          (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+          (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
       
           const res = await request(app)
             .post('/auth/forgotpassword-part3')
@@ -620,7 +624,7 @@ describe('Resend OTP', () => {
       
         it('should return 500 for server error', async () => {
           (jwt.verify as jest.Mock).mockReturnValue({ email: 'test@test.com', iss: 'test_issuer', aud: 'test_audience' });
-          (pool.query as jest.Mock).mockRejectedValue(new Error('Database error'));
+          (prisma.user.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'));
       
           const res = await request(app)
             .post('/auth/forgotpassword-part3')
